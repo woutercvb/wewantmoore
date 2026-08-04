@@ -1,29 +1,109 @@
-This repository contains an AI-assisted formalization in Lean 4 of the preprint "Asymptotically attaining the Moore bound" by W. Cames van Batenburg and S. Korsky, August 4, 2026, available at https://arxiv.org/abs/(TO BE INSERTED LATER).
+# Asymptotically attaining the Moore bound — Lean 4 formalization
 
+This repository formalizes the central theorem chain of the 3 August 2026
+draft *Asymptotically attaining the Moore bound* by W. Cames van Batenburg and
+S. Korsky. The repository snapshot is dated 4 August 2026; the statement and
+equation references below refer to that 3 August draft.
 
-Neither of the two authors is a native speaker of Lean. It is therefore conceivable that the formalization is not up to the standard of experienced Lean users. We welcome independent checks by humans. In normal times, such independent human expert checks would have been sought prior to submission to arXiv, but in the age of AI acceleration it seems more prudent to move fast. That being said, we have made the following precautions: 
+The formalized chain consists of Lemma 2.1, Proposition 3.1 including equations
+(6)--(9), Theorem 1.1, Lemma 4.1, and Corollary 1.2. The graph extrema and
+constructions use `SimpleGraph.ediam`, so disconnected graphs cannot enter
+through Mathlib's convention for ordinary graph diameter.
 
+## Main declarations
 
-We checked the formalization among 6 independent sessions of ChatGPT and Claude, asking it to "find the weaknesses" or "why is this formalization not complete?".  An example of a full prompt we used is:
+The principal exports are:
 
-"
-Please consider the attached attempted formalization in Lean 4 of the attached preprint. Please identify the mistakes and then explain to me why this formalization is incorrect or incomplete. In particular, check whether: 
-(i) it compiles without sorry and only depends on the three standard axioms (propext, Classical.choice, and Quot.sound), and
-(ii)  the proofs of the statements have been formalized correctly, and
-(iii) the statements themselves have been formalized correctly and faithfully, and
-(iv) the formalization follows the actual arguments and reasoning steps that were used in the proofs in the write-up. That is, check that not a different proof has tacitly been formalized.
-"
+1. `DegreeDiameter.common_basis_orderings`, the common-basis/permutation step
+   used in Lemma 2.1;
+2. `DegreeDiameter.alternating_route`, Lemma 2.1;
+3. `DegreeDiameter.proposition_3_1`, containing the finite claims in equations
+   (6)--(8) and both actual-degree limits in equation (9), for one concrete
+   graph family over every prime-power field order;
+4. `DegreeDiameter.theorem_1_1`;
+5. `DegreeDiameter.lemma_4_1` and its bounded form
+   `DegreeDiameter.lemma_4_1_le`; and
+6. `DegreeDiameter.corollary_1_2`.
 
-The initial formalization attempt already compiled without sorry, and depended only on the standard axioms propext, Classical.choice, and Quot.sound. However, for Proposition 3.1 it was not yet completely faithful to the way we wrote the proofs. In contrast, the version that is currently in the repository survived the scrutiny of adversarial checks (up to the small caveats described below). Due to the stricter requirements we imposed, the number of files and their sizes grew larger than perhaps necessary.
+The public versions of Theorem 1.1 and Corollary 1.2 use the concrete
+Proposition 3.1 family. Separate big-cell proofs remain available as
+`theorem_1_1_via_big_cell` and `corollary_1_2_via_big_cell`.
 
-In the present state, adversarial LLM checks still produce some complaints when prompted to provide them, but we believe they are minor. For instance: 
-(1) For some lines with asymptotic terms such as O_k((q^{-1}), Lean formalizes computations via a slightly different approach compared to the write-up.
-(2) For the asymptotic analysis, the preprint chooses the largest prime not exceeding d^{1/2k}-1, while the Lean formalization chooses the prime in a different way,
-(3) For the proof of Theorem 1.1, the preprint singles out the easy case $k=1$ by noting it (also) follows from complete graphs, while the Lean formalization absorbs it in the general argument.
-(4) For the external results cited for use in Lemma 2.1, the proofs supplied by the Lean formalization do not necessarily correspond to the proofs in the cited sources.
+## Build and verification
 
-Perhaps the most clear `gap' is that the external Theorem 7 (or the more accurate Theorem 10) from reference [8] (https://doi.org/10.1137/21M1437354) has not yet been formalized. The present paper only invokes that result for the claim that the bound from Corollary 1.2 is tight for bipartite graphs, and thus it has no consequences for any of the formally stated results (Theorem 1.1, Corollary 1.2, Lemma 2.1, Proposition 3.1 and Lemma 4.1).
+The project is pinned to Lean `v4.32.2`, Mathlib commit
+`905b95818eb32af7874a58b427f50c1711a5e96c`, and LeanArchitect commit
+`d9013cc08bd2b5483e837368dfa4cc7ead92a5c2`.
 
-The formalization was carried out in the final phase of the project, based on the version of August 3, 2026.
+From a clean checkout, run:
 
+```sh
+lake build
+sh scripts/audit.sh
+```
 
+The separate provenance check uses the network to compare the vendored
+PrimeNumberTheoremAnd files with their recorded upstream commit:
+
+```sh
+sh scripts/verify_third_party.sh
+```
+
+The audit scans the Lean sources for proof holes and prohibited trust
+mechanisms, rebuilds the project, regenerates `axiom-audit.txt`, checks the
+standard-axiom allowlist, and verifies the dependency route of the public final
+theorems. See `RELEASE_AND_REPRODUCIBILITY.md` for the full clean-checkout and
+release procedure.
+
+## Proof organization
+
+- `CommonBasis.lean`, `OddEvenRoute.lean`, and `Lemma21.lean` contain the
+  common-basis argument and odd--even route for Lemma 2.1.
+- `CompletionCount.lean`, `FlagEnumeration.lean`, and `ExactOrder.lean` prove
+  the completion multiplicities and exact order formula.
+- `Symmetry.lean`, `ExactDiameter.lean`, and `Proposition31.lean` establish
+  regularity, the degree cap, and exact diameter for the concrete graph.
+- `FiniteFieldModels.lean`, `Proposition31Asymptotics.lean`, and
+  `Proposition31Full.lean` establish and package equations (6)--(9) over all
+  prime-power field orders.
+- `Theorem11FromProposition31.lean` proves Theorem 1.1 from that package, prime
+  interpolation, and the Moore bound.
+- `EdgeReduction.lean` and `Corollary12FromProposition31.lean` contain Lemma
+  4.1 and the proof of Corollary 1.2.
+- `LowerBound.lean`, `Construction.lean`, and `AsymptoticsLimits.lean` contain
+  the independent big-cell proof route.
+
+`WRITEUP_ALIGNMENT.md` gives a declaration-by-declaration map between the
+formalization and the draft.
+
+## Proof correspondence and scope
+
+The formalization follows the paper's principal construction and most of its
+proof architecture, but it is not a line-by-line transcription. In particular:
+
+- the paper treats `k = 1` in Theorem 1.1 using the complete graph, whereas the
+  Lean proof applies the Proposition 3.1 construction uniformly for every
+  positive `k`;
+- Lean proves the order/cap asymptotic through polynomial leading terms rather
+  than formalizing the displayed `O_k(q⁻¹)` estimates; and
+- prime interpolation chooses a suitably close prime rather than defining the
+  largest prime below the paper's threshold.
+
+These differences do not change the exported statements. The Lean
+representation of partial flags is also extensionally equivalent, rather than
+definitionally identical, to the tuple notation in the draft.
+
+The following are outside the kernel-checked scope:
+
+- the explicit `O_k(q⁻¹)` and `O_k(q⁻²)` error rates and the quantitative
+  remark;
+- the bipartite-restricted exact limit that uses a separately cited external
+  odd-cycle-free upper bound; and
+- historical and bibliographical assertions not needed for the central
+  theorem chain.
+
+## Third-party source and license
+
+The project source is distributed under Apache-2.0. The vendored
+PrimeNumberTheoremAnd material is separately identified and licensed; see
+`THIRD_PARTY.md` and `LICENSE-PrimeNumberTheoremAnd`.

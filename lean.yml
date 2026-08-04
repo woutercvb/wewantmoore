@@ -1,0 +1,58 @@
+name: Lean build and trust audit
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-audit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the exact revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Install pinned Lean and build from the committed manifest
+        uses: leanprover/lean-action@38fbc41a8c28c4cbaec22d7f7de508ec2e7c0dd9 # v1.5.0
+        with:
+          build: true
+          test: false
+          lint: false
+          use-mathlib-cache: true
+
+      - name: Report source and dependency revisions
+        run: |
+          printf 'source=%s\n' "$(git rev-parse HEAD)"
+          printf 'workflow-source=%s\n' "$GITHUB_SHA"
+          printf 'toolchain=%s\n' "$(cat lean-toolchain)"
+          lean --version
+          lake --version
+          jq -r '.packages[] | select(.name == "mathlib" or .name == "LeanArchitect") | "\(.name)=\(.rev)"' lake-manifest.json
+
+      - name: Verify that dependency resolution did not change the manifest
+        run: git diff --exit-code -- lake-manifest.json
+
+      - name: Verify the recorded third-party provenance
+        run: sh scripts/verify_third_party.sh
+
+      - name: Run the source scan and trust audits
+        run: sh scripts/audit.sh
+
+      - name: Verify the committed reproducibility reports
+        run: |
+          git ls-files --error-unmatch lake-manifest.json axiom-audit.txt dependency-audit.txt
+          git diff --exit-code -- lake-manifest.json axiom-audit.txt dependency-audit.txt
+
+      - name: Upload the generated trust reports
+        if: success()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: trust-audit-${{ github.sha }}
+          path: |
+            axiom-audit.txt
+            dependency-audit.txt
+          if-no-files-found: error

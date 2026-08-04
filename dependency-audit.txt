@@ -1,0 +1,4 @@
+dependency audit PASS: DegreeDiameter.theorem_1_1_from_proposition_3_1
+dependency audit PASS: DegreeDiameter.corollary_1_2_from_proposition_3_1
+dependency audit PASS: DegreeDiameter.theorem_1_1
+dependency audit PASS: DegreeDiameter.corollary_1_2

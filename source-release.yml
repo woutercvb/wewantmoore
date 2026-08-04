@@ -1,0 +1,101 @@
+name: Validated source release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  validate-and-attach-source:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the released tag
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Install pinned Lean and build from the committed manifest
+        uses: leanprover/lean-action@38fbc41a8c28c4cbaec22d7f7de508ec2e7c0dd9 # v1.5.0
+        with:
+          build: true
+          test: false
+          lint: false
+          use-mathlib-cache: true
+
+      - name: Verify third-party provenance
+        run: sh scripts/verify_third_party.sh
+
+      - name: Run source and trust audits
+        run: sh scripts/audit.sh
+
+      - name: Verify dependency and report stability
+        run: |
+          git ls-files --error-unmatch lake-manifest.json axiom-audit.txt dependency-audit.txt
+          git diff --exit-code -- lake-manifest.json axiom-audit.txt dependency-audit.txt
+
+      - name: Build and validate the source archive from the immutable Git tree
+        id: archive
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -eu
+          commit=$(git rev-parse --verify HEAD)
+          tag_commit=$(git rev-list -n 1 "$RELEASE_TAG")
+          test "$commit" = "$tag_commit"
+          archive="AsymptoticallyAttainingTheMooreBound_4august2026-$commit.zip"
+          sh scripts/make_source_archive.sh "$RUNNER_TEMP/$archive"
+          digest=$(cut -d ' ' -f 1 "$RUNNER_TEMP/$archive.sha256")
+          printf 'archive=%s\n' "$archive" >>"$GITHUB_OUTPUT"
+          printf 'digest=%s\n' "$digest" >>"$GITHUB_OUTPUT"
+
+      - name: Record release verification metadata
+        env:
+          ARCHIVE: ${{ steps.archive.outputs.archive }}
+          DIGEST: ${{ steps.archive.outputs.digest }}
+        run: |
+          metadata="$RUNNER_TEMP/verification-metadata.txt"
+          {
+            printf 'source_commit=%s\n' "$(git rev-parse HEAD)"
+            printf 'archive=%s\n' "$ARCHIVE"
+            printf 'archive_sha256=%s\n' "$DIGEST"
+            printf 'toolchain=%s\n' "$(cat lean-toolchain)"
+            jq -r '.packages[] | select(.name == "mathlib" or .name == "LeanArchitect") | "\(.name)=\(.rev)"' lake-manifest.json
+            printf 'axiom_report_sha256=%s\n' "$(sha256sum axiom-audit.txt | cut -d ' ' -f 1)"
+            printf 'dependency_report_sha256=%s\n' "$(sha256sum dependency-audit.txt | cut -d ' ' -f 1)"
+            printf 'source_scan=PASS\n'
+            printf 'lake_build=PASS\n'
+            printf 'axiom_allowlist=PASS\n'
+            printf 'declaration_dependencies=PASS\n'
+            printf 'third_party_provenance=PASS\n'
+            lean --version
+            lake --version
+          } >"$metadata"
+          cat "$metadata"
+
+      - name: Attach the validated source and verification records
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          ARCHIVE: ${{ steps.archive.outputs.archive }}
+        run: |
+          gh release upload "$RELEASE_TAG" \
+            "$RUNNER_TEMP/$ARCHIVE" \
+            "$RUNNER_TEMP/$ARCHIVE.sha256" \
+            "$RUNNER_TEMP/verification-metadata.txt" \
+            axiom-audit.txt dependency-audit.txt \
+            --clobber
+
+      - name: Record the archive SHA-256 in the release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          ARCHIVE: ${{ steps.archive.outputs.archive }}
+          DIGEST: ${{ steps.archive.outputs.digest }}
+        run: |
+          notes="$RUNNER_TEMP/release-notes.md"
+          gh release view "$RELEASE_TAG" --json body --jq .body >"$notes"
+          python3 scripts/append_release_integrity.py "$notes" "$ARCHIVE" "$DIGEST"
+          gh release edit "$RELEASE_TAG" --notes-file "$notes"

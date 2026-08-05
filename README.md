@@ -1,14 +1,15 @@
 # Asymptotically attaining the Moore bound — Lean 4 formalization
 
-This repository formalizes the central theorem chain of the 3 August 2026
-draft *Asymptotically attaining the Moore bound* by W. Cames van Batenburg and
-S. Korsky. The repository snapshot is dated 4 August 2026; the statement and
-equation references below refer to that 3 August draft.
+This repository formalizes the central theorem chain of the 4 August 2026
+preprint *Asymptotically attaining the Moore bound* by W. Cames van Batenburg and
+S. Korsky, available at https://arxiv.org/abs/2608.03965 
+
+The AI-assisted formalization was carried out in the final phase of the project,
+based upon the 3 August 2026 version of the draft. No mathematically relevant changes where made between then and submission.
 
 The formalized chain consists of Lemma 2.1, Proposition 3.1 including equations
 (6)--(9), Theorem 1.1, Lemma 4.1, and Corollary 1.2. The graph extrema and
-constructions use `SimpleGraph.ediam`, so disconnected graphs cannot enter
-through Mathlib's convention for ordinary graph diameter.
+constructions use `SimpleGraph.ediam`.
 
 ## Main declarations
 

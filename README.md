@@ -5,7 +5,7 @@ preprint *Asymptotically attaining the Moore bound* by W. Cames van Batenburg an
 S. Korsky, available at https://arxiv.org/abs/2608.03965 
 
 The AI-assisted formalization was carried out in the final phase of the project,
-based upon the 3 August 2026 version of the draft. No mathematically relevant changes where made between then and submission.
+based on the 3 August 2026 version of the draft. No mathematically relevant changes where made between then and submission.
 
 The formalized chain consists of Lemma 2.1, Proposition 3.1 including equations
 (6)--(9), Theorem 1.1, Lemma 4.1, and Corollary 1.2. The graph extrema and
